@@ -1,4 +1,4 @@
-version: "2.1.0"
+version: "2.2.0"
 description: "A frustration-free e-paper library for parallel eink panels."
 url: "https://github.com/ddB0515/FastEPD"
 license: "Apache-2.0"
