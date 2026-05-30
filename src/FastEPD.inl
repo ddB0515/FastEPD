@@ -35,6 +35,24 @@
 #define __BB_EP__
 #pragma GCC optimize("O2")
 
+const uint8_t ucMirror[256] PROGMEM =
+{0, 128, 64, 192, 32, 160, 96, 224, 16, 144, 80, 208, 48, 176, 112, 240,
+    8, 136, 72, 200, 40, 168, 104, 232, 24, 152, 88, 216, 56, 184, 120, 248,
+    4, 132, 68, 196, 36, 164, 100, 228, 20, 148, 84, 212, 52, 180, 116, 244,
+    12, 140, 76, 204, 44, 172, 108, 236, 28, 156, 92, 220, 60, 188, 124, 252,
+    2, 130, 66, 194, 34, 162, 98, 226, 18, 146, 82, 210, 50, 178, 114, 242,
+    10, 138, 74, 202, 42, 170, 106, 234, 26, 154, 90, 218, 58, 186, 122, 250,
+    6, 134, 70, 198, 38, 166, 102, 230, 22, 150, 86, 214, 54, 182, 118, 246,
+    14, 142, 78, 206, 46, 174, 110, 238, 30, 158, 94, 222, 62, 190, 126, 254,
+    1, 129, 65, 193, 33, 161, 97, 225, 17, 145, 81, 209, 49, 177, 113, 241,
+    9, 137, 73, 201, 41, 169, 105, 233, 25, 153, 89, 217, 57, 185, 121, 249,
+    5, 133, 69, 197, 37, 165, 101, 229, 21, 149, 85, 213, 53, 181, 117, 245,
+    13, 141, 77, 205, 45, 173, 109, 237, 29, 157, 93, 221, 61, 189, 125, 253,
+    3, 131, 67, 195, 35, 163, 99, 227, 19, 147, 83, 211, 51, 179, 115, 243,
+    11, 139, 75, 203, 43, 171, 107, 235, 27, 155, 91, 219, 59, 187, 123, 251,
+    7, 135, 71, 199, 39, 167, 103, 231, 23, 151, 87, 215, 55, 183, 119, 247,
+    15, 143, 79, 207, 47, 175, 111, 239, 31, 159, 95, 223, 63, 191, 127, 255};
+
 // For measuring the performance of each stage of updates
 //#define SHOW_TIME
 // 8 columns by 16 rows. From white (15) to each gray (0-black to 15-white) at 20C
@@ -209,7 +227,7 @@ const BBPANELDEF panelDefs[] = {
       10, 0, 2, 42, 1, 0, 46 /* LoRa CS */, u8M5Matrix, sizeof(u8M5Matrix), 16, -1600}, // BB_PANEL_LILYGO_T5PRO 
     {1440, 720, 40000000, BB_PANEL_FLAG_MIRROR_X, {27,28,29,30,31,32,33,34}, 8, BB_NOT_USED, 36, 13, 25, 0, 26,
       24, 0, 7, 8, 0, 0, 11 /* LED1_EN */, u8M5Matrix, sizeof(u8M5Matrix), 16, -1600}, // BB_PANEL_LILYGO_T5P4 
-    {1872, 1404, 26666666, BB_PANEL_FLAG_MIRROR_X | BB_PANEL_FLAG_DARK, {8,18,17,16,15,7,6,5,47,21,14,13,12,11,10,9}, 16, 11, 48, 45, 41, 8, 42,
+    {1872, 1404, 26666666, BB_PANEL_FLAG_MIRROR_X, {8,18,17,16,15,7,6,5,47,21,14,13,12,11,10,9}, 16, 11, 48, 45, 41, 8, 42,
       4, 14, 39, 40, BB_NOT_USED, 0, 46, u8GrayMatrix, sizeof(u8GrayMatrix), 16, -1100}, // BB_PANEL_TRMNL_X
 {0, 0, 26666666, BB_PANEL_FLAG_NONE, {2,3,4,5,6,7,8,9}, 8, 26, 45, 51, 46, 47, 48,
       50, 27, 28, 29, 37, 0, 35, u8GrayMatrix, sizeof(u8GrayMatrix), 32, -1600}, // BB_PANEL_EPDINKY_P4
@@ -350,8 +368,8 @@ static esp_lcd_panel_io_i80_config_t s3_io_config = {
         .trans_queue_depth = 4,
         .on_color_trans_done = s3_notify_dma_ready,
         .user_ctx = NULL, // debug
-        .lcd_cmd_bits = 8,
-        .lcd_param_bits = 8,
+        .lcd_cmd_bits = 0,
+        .lcd_param_bits = 0,
         .dc_levels = {
             .dc_idle_level = 0,
             .dc_cmd_level = 0,
@@ -1378,7 +1396,7 @@ void EPDiyV7RowControl(void *pBBEP, int iType)
         gpio_set_level(le, 0);
         delayMicroseconds(0);
     }
-}
+} /* EPDiyV7RowControl() */
 
 void SensoriaRowControl(void *pBBEP, int iType)
 {
@@ -1602,7 +1620,6 @@ void bbepWriteRow(FASTEPDSTATE *pState, uint8_t *pData, int iLen, int bRowStep)
     }
     if (bSlowSPH) {
         gpio_set_level(u8SPH, 0); // SPH/CS active
-//        gpio_set_level(u8CKV, 1); // CKV on
     }
     dma_is_done = false;
     gpio_set_level((gpio_num_t)pState->panelDef.ioCKV, 1); // CKV on
@@ -1734,6 +1751,10 @@ int bbepSetDefinedPanel(FASTEPDSTATE *pState, int iPanel)
             bbepSetPanelSize(pState, 1872, 1404, BB_PANEL_FLAG_MIRROR_X, -1600);
             bbepSetCustomMatrix(pState, u8TenPointThreeMatrix, sizeof(u8TenPointThreeMatrix));
             break;
+        case BBEP_DISPLAY_ED078KC2:
+            bbepSetPanelSize(pState, 1872, 1404, BB_PANEL_FLAG_NONE, -1600);
+            bbepSetCustomMatrix(pState, u8TenPointThreeMatrix, sizeof(u8TenPointThreeMatrix));
+            break;
         case BBEP_DISPLAY_ED052TC4:
             bbepSetPanelSize(pState, 1280, 720, BB_PANEL_FLAG_MIRROR_X, -1600);
             bbepSetCustomMatrix(pState, u8FivePointTwoMatrix, sizeof(u8FivePointTwoMatrix));
@@ -1778,6 +1799,7 @@ int bbepSetPanelSize(FASTEPDSTATE *pState, int width, int height, int flags, int
         free(pState->pCurrent);
         return BBEP_ERROR_NO_MEMORY;
     }
+#endif // LINUX
     if (pState->iPanelType == BB_PANEL_IT8951) {
         pState->pfnSetPixel = bbepSetPixel2Clr;
         pState->pfnSetPixelFast = bbepSetPixelFast2Clr;
@@ -1789,7 +1811,6 @@ int bbepSetPanelSize(FASTEPDSTATE *pState, int width, int height, int flags, int
         pState->rotation = 0;
         return BBEP_SUCCESS; // for it8951 only
     }
-#endif // !__LINUX__
 
     // Allocate memory for each line to transmit
 #ifndef __LINUX__
@@ -1908,19 +1929,19 @@ void bbepInitLights(FASTEPDSTATE *pState, uint8_t led1, uint8_t led2)
 void it8951WaitForReady(FASTEPDSTATE *pState)
 {
     const uint32_t start = millis();
-    while (gpio_get_level((gpio_num_t)pState->u8Busy) == LOW) {
+    while (digitalRead(pState->u8Busy) == LOW) {
         if (millis() - start > 3000) {
             // Serial-only — HRDY timeouts are expected during the multi-attempt probe sequence
             //Serial.println("HRDY timeout");
             break;
         }
-        vTaskDelay(pdMS_TO_TICKS(1));
+        vTaskDelay(10);
     }
 } /* it8951WaitForReady() */
 
 void it8951WriteNData(FASTEPDSTATE *pState, const uint16_t *buf, uint32_t word_count) {
-#ifdef ARDUINO
     gpio_set_level((gpio_num_t)pState->u8CS, LOW);
+#ifdef ARDUINO
     SPI.beginTransaction(SPISettings(pState->spi_frequency, MSBFIRST, SPI_MODE0));
     //it8951GetSystemInfo(pState);
     it8951WaitForReady(pState);
@@ -1930,34 +1951,49 @@ void it8951WriteNData(FASTEPDSTATE *pState, const uint16_t *buf, uint32_t word_c
         SPI.transfer16(buf[i]);
     }
     SPI.endTransaction();
-    gpio_set_level((gpio_num_t)pState->u8CS, HIGH);
+#elif defined (__LINUX__)
+    it8951WaitForReady(pState);
+    for (uint32_t i = 0; i < word_count; i++) {
+        linux_spi_write16(buf[i], pState->spi_frequency);
+    } 
 #endif // ARDUINO
+    gpio_set_level((gpio_num_t)pState->u8CS, HIGH);
 } /* i8951WriteNData() */
 
 void it8951WriteData(FASTEPDSTATE *pState, uint16_t data) {
-#ifdef ARDUINO
     gpio_set_level((gpio_num_t)pState->u8CS, LOW);
+#ifdef ARDUINO
     SPI.beginTransaction(SPISettings(pState->spi_frequency, MSBFIRST, SPI_MODE0));
     it8951WaitForReady(pState);
     SPI.transfer16(0x0000); // data preamble
     it8951WaitForReady(pState);
     SPI.transfer16(data);
     SPI.endTransaction();
+#elif defined (__LINUX__)
+    it8951WaitForReady(pState);
+    linux_spi_write16(0, pState->spi_frequency);
+    it8951WaitForReady(pState);
+    linux_spi_write16(data, pState->spi_frequency);
+#endif
     gpio_set_level((gpio_num_t)pState->u8CS, HIGH);
-#endif // ARDUINO
 } /* it8951WriteData() */
 
 void it8951WriteCmdCode(FASTEPDSTATE *pState, uint16_t cmd) {
-#ifdef ARDUINO
     gpio_set_level((gpio_num_t)pState->u8CS, LOW);
+#ifdef ARDUINO
     SPI.beginTransaction(SPISettings(pState->spi_frequency, MSBFIRST, SPI_MODE0));
     it8951WaitForReady(pState);
     SPI.transfer16(0x6000); // command preamble
     it8951WaitForReady(pState);
     SPI.transfer16(cmd);
     SPI.endTransaction();
+#elif defined(__LINUX__)
+    it8951WaitForReady(pState);
+    linux_spi_write16(0x6000, pState->spi_frequency);
+    it8951WaitForReady(pState);
+    linux_spi_write16(cmd, pState->spi_frequency);
+#endif
     gpio_set_level((gpio_num_t)pState->u8CS, HIGH);
-#endif // ARDUINO
 } /* it8951WriteCmdCode() */
 
 void it8951SendCmdArg(FASTEPDSTATE *pState, uint16_t cmd, uint16_t *args, uint16_t num_args)
@@ -1976,26 +2012,31 @@ void it8951WriteVcom(FASTEPDSTATE *pState, uint16_t selector, uint16_t value)
 }
 
 uint16_t it8951ReadData(FASTEPDSTATE *pState) {
-#ifdef ARDUINO
+uint16_t data = 0;
     gpio_set_level((gpio_num_t)pState->u8CS, LOW);
+#ifdef ARDUINO
     SPI.beginTransaction(SPISettings(pState->spi_frequency, MSBFIRST, SPI_MODE0));
     it8951WaitForReady(pState);
     SPI.transfer16(0x1000); // read preamble
     SPI.transfer16(0);       // dummy read
     it8951WaitForReady(pState);
-    const uint16_t data = SPI.transfer16(0);
+    data = SPI.transfer16(0);
     SPI.endTransaction();
+#elif defined (__LINUX__)
+    it8951WaitForReady(pState);
+    linux_spi_write16(0x1000, pState->spi_frequency); // read preamble
+    linux_spi_write16(0, pState->spi_frequency); // dummy write
+    it8951WaitForReady(pState);
+    data = linux_spi_read16(pState->spi_frequency); 
+#endif
     gpio_set_level((gpio_num_t)pState->u8CS, HIGH);
     return data;
-#else
-    return 0;
-#endif
 } /* it8951ReadData() */
 
 void it8951ReadNData(FASTEPDSTATE *pState, uint16_t *buf, uint32_t word_count)
 {
-#ifdef ARDUINO
     gpio_set_level((gpio_num_t)pState->u8CS, LOW);
+#ifdef ARDUINO
     SPI.beginTransaction(SPISettings(pState->spi_frequency, MSBFIRST, SPI_MODE0));
     it8951WaitForReady(pState);
     SPI.transfer16(0x1000); // read preamble
@@ -2006,8 +2047,17 @@ void it8951ReadNData(FASTEPDSTATE *pState, uint16_t *buf, uint32_t word_count)
         buf[i] = SPI.transfer16(0);
     }
     SPI.endTransaction();
-    gpio_set_level((gpio_num_t)pState->u8CS, HIGH);
+#elif defined (__LINUX__)
+    it8951WaitForReady(pState);
+    linux_spi_write16(0x1000, pState->spi_frequency); // read preamble
+    it8951WaitForReady(pState);
+    linux_spi_write16(0, pState->spi_frequency); // dummy write
+    it8951WaitForReady(pState);
+    for (uint32_t i=0; i<word_count; i++) {
+        buf[i] = linux_spi_read16(pState->spi_frequency);
+    }
 #endif // ARDUINO
+    gpio_set_level((gpio_num_t)pState->u8CS, HIGH);
 } /* it8951ReadNData() */
 
 uint16_t it8951ReadReg(FASTEPDSTATE *pState, uint16_t addr)
@@ -2032,7 +2082,7 @@ void it8951WaitForLUTReady(FASTEPDSTATE *pState) {
             break;
         }
         //yield();
-        vTaskDelay(pdMS_TO_TICKS(10));
+        vTaskDelay(100);
     }
 } /* it8951WaitForLUTReady() */
 
@@ -2115,60 +2165,68 @@ IT8951DevInfo dev_info_;
 
 } /* it8951ProbeController() */
 
-void it8951WriteFramebuffer1Bit(FASTEPDSTATE *pState)
+void it8951WriteFramebuffer1Bit(FASTEPDSTATE *pState, int bPartial, int iStartLine, int iEndLine)
 {
-#ifdef ARDUINO
-uint8_t *s;
+uint8_t *s, *d;
 int iPitch;
 
     IT8951EinkPower(pState, 1);
     it8951WaitForLUTReady(pState);
     it8951SetImgBufBaseAddr(pState);
 
-//Serial.println("about to load img area");
-    it8951LoadImgAreaStart(pState, (pState->iFlags & BB_PANEL_FLAG_MIRROR_X) ? IT8951_LDIMG_B_ENDIAN : IT8951_LDIMG_L_ENDIAN, IT8951_8BPP, 0, 0, 0, pState->native_width/8, pState->native_height);
+    it8951LoadImgAreaStart(pState, (pState->iFlags & BB_PANEL_FLAG_MIRROR_X) ? IT8951_LDIMG_B_ENDIAN : IT8951_LDIMG_L_ENDIAN, IT8951_8BPP, 0, 0, iStartLine, pState->native_width/8, 1+(iEndLine-iStartLine));
    
-//Serial.println("About to start data");
     gpio_set_level((gpio_num_t)pState->u8CS, LOW);
+#ifdef ARDUINO
     SPI.beginTransaction(SPISettings(pState->spi_frequency, MSBFIRST, SPI_MODE0));
     it8951WaitForReady(pState);
     SPI.transfer16(0x0000); // data preamble
+#elif defined (__LINUX__)
+    it8951WaitForReady(pState);
+    linux_spi_write16(0, pState->spi_frequency);
+#endif
     it8951WaitForReady(pState);
 
     s = pState->pCurrent;
     iPitch = (pState->native_width + 7)/8;    
-    for (int y = 0; y < pState->native_height; y++) {
+    s += (iPitch * iStartLine);
+    for (int y = iStartLine; y <= iEndLine; y++) {
         if (pState->iFlags & BB_PANEL_FLAG_MIRROR_X) {
-            uint8_t *d = pState->pTemp;
+            d = pState->pTemp;
             for (int x = 0; x<iPitch; x++) {
                 d[iPitch - 1 - x] = s[x];
             }
-            SPI.writeBytes(d, iPitch);
         } else {
-            SPI.writeBytes(s, iPitch);
+            d = pState->pTemp;
+            for (int x = 0; x<iPitch; x+=2) { // work 16-bits at a time
+                d[x+1] = ucMirror[s[x]];
+                d[x] = ucMirror[s[x+1]];
+            }
         }
+#ifdef ARDUINO
+        SPI.writeBytes(d, iPitch);
+#elif defined(__LINUX__)
+        linux_spi_write(d, iPitch, pState->spi_frequency);
+#endif
         if ((y & 0x07) == 0) {
             yield();
         }
         s += iPitch;
     }
+#ifdef ARDUINO
     SPI.endTransaction();
+#endif
     gpio_set_level((gpio_num_t)pState->u8CS, HIGH);
-//Serial.println("Data sent");
     // finish the operation
     it8951WriteCmdCode(pState, IT8951_TCON_LD_IMG_END);
-    it8951DisplayArea1Bit(pState, 0, 0, pState->native_width, pState->native_height, 2, 0, 0xff);
+    it8951DisplayArea1Bit(pState, 0, iStartLine, pState->native_width, 1+(iEndLine-iStartLine), (bPartial) ? IT8951_MODE_6 : IT8951_MODE_2, 0, 0xff);
     it8951WaitForReady(pState);
-    IT8951EinkPower(pState, 0);
-
-//Serial.println("finish update");
-#endif // ARDUINO
+    pState->prev_mode = pState->mode;
 } /* it8951WriteFramebuffer1Bit() */
 
 void it8951WriteFramebuffer4Bit(FASTEPDSTATE *pState)
 {
-#ifdef ARDUINO
-uint8_t *s;
+uint8_t *s, *d;
 int iPitch;
 
     IT8951EinkPower(pState, 1);
@@ -2182,42 +2240,54 @@ int iPitch;
     
 
     gpio_set_level((gpio_num_t)pState->u8CS, LOW);
-    SPI.beginTransaction(SPISettings(pState->spi_frequency, MSBFIRST, SPI_MODE0));
     it8951WaitForReady(pState);
+#ifdef ARDUINO
+    SPI.beginTransaction(SPISettings(pState->spi_frequency, MSBFIRST, SPI_MODE0));
     SPI.transfer16(0x0000); // data preamble
+#elif defined(__LINUX__)
+    linux_spi_write16(0, pState->spi_frequency);
+#endif
     it8951WaitForReady(pState);
 
     s = pState->pCurrent;
     iPitch = (pState->native_width + 1)/2;
     for (int y = 0; y < pState->native_height; y++) {
         if (pState->iFlags & BB_PANEL_FLAG_MIRROR_X) {
-            uint8_t *d = pState->pTemp;
+            d = pState->pTemp;
             for (int x = 0; x<iPitch; x++) {
                 d[iPitch - 1 - x] = (s[x] >> 4) | (s[x] << 4);
             }
-            SPI.writeBytes(d, iPitch);
         } else {
-            SPI.writeBytes(s, iPitch);
+            d = pState->pTemp;
+            for (int x = 0; x<iPitch; x+=2) { // work 16-bits at a time
+                d[x+1] = (s[x] >> 4) | (s[x] << 4);
+                d[x] = (s[x+1] >> 4) | (s[x+1] << 4);
+            }
         }
+#ifdef ARDUINO
+        SPI.writeBytes(d, iPitch);
+#elif defined(__LINUX__)
+        linux_spi_write(d, iPitch, pState->spi_frequency);
+#endif
         if ((y & 0x07) == 0) {
             yield();
         }
         s += iPitch;
     }
-
+#ifdef ARDUINO
     SPI.endTransaction();
+#endif
     gpio_set_level((gpio_num_t)pState->u8CS, HIGH);
     it8951WriteCmdCode(pState, IT8951_TCON_LD_IMG_END);
     it8951DisplayArea(pState, 0, 0, pState->native_width, pState->native_height, 2);
     it8951WaitForReady(pState);
-    IT8951EinkPower(pState, 0);
-#endif // ARDUINO
+    pState->prev_mode = pState->mode;
+
 } /* it8951WriteFramebuffer4Bit() */
 
 void it8951WriteFramebuffer2Bit(FASTEPDSTATE *pState)
 {
-#ifdef ARDUINO
-uint8_t *s;
+uint8_t *s, *d;
 int iPitch;
 
     IT8951EinkPower(pState, 1);
@@ -2229,39 +2299,52 @@ int iPitch;
 
     it8951LoadImgAreaStart(pState, (pState->iFlags & BB_PANEL_FLAG_MIRROR_X) ? IT8951_LDIMG_B_ENDIAN : IT8951_LDIMG_L_ENDIAN, IT8951_2BPP, 0, 0, 0, pState->native_width, pState->native_height);
 
-
     gpio_set_level((gpio_num_t)pState->u8CS, LOW);
-    SPI.beginTransaction(SPISettings(pState->spi_frequency, MSBFIRST, SPI_MODE0));
     it8951WaitForReady(pState);
+#ifdef ARDUINO
+    SPI.beginTransaction(SPISettings(pState->spi_frequency, MSBFIRST, SPI_MODE0));
     SPI.transfer16(0x0000); // data preamble
+#elif defined(__LINUX__)
+    linux_spi_write16(0, pState->spi_frequency);
+#endif
     it8951WaitForReady(pState);
 
     s = pState->pCurrent;
     iPitch = (pState->native_width + 3)/4;
     for (int y = 0; y < pState->native_height; y++) {
         if (pState->iFlags & BB_PANEL_FLAG_MIRROR_X) {
-            uint8_t *d = pState->pTemp;
+            d = pState->pTemp;
             for (int x = 0; x<iPitch; x++) {
                 uint8_t a = s[x];
                 d[iPitch - 1 - x] = (a >> 6) | ((a >> 2) & 0xc) | ((a & 0xc) << 2) | ((a & 3) << 6);
             }
-            SPI.writeBytes(d, iPitch);
         } else {
-            SPI.writeBytes(s, iPitch);
+            d = pState->pTemp;
+            for (int x = 0; x<iPitch; x+=2) { // work 16-bits at a time
+                uint8_t a = s[x], b = s[x+1];
+                d[x+1] = (a >> 6) | ((a >> 2) & 0xc) | ((a & 0xc) << 2) | ((a & 3) << 6);
+                d[x] = (b >> 6) | ((b >> 2) & 0xc) | ((b & 0xc) << 2) | ((b & 3) << 6);
+            }
         }
+#ifdef ARDUINO
+        SPI.writeBytes(d, iPitch);
+#elif defined(__LINUX__)
+        linux_spi_write(d, iPitch, pState->spi_frequency);
+#endif
         if ((y & 0x07) == 0) {
             yield();
         }
         s += iPitch;
     }
 
+#ifdef ARDUINO
     SPI.endTransaction();
+#endif
     gpio_set_level((gpio_num_t)pState->u8CS, HIGH);
     it8951WriteCmdCode(pState, IT8951_TCON_LD_IMG_END);
     it8951DisplayArea(pState, 0, 0, pState->native_width, pState->native_height, 2);
     it8951WaitForReady(pState);
-    IT8951EinkPower(pState, 0);
-#endif // ARDUINO
+    pState->prev_mode = pState->mode;
 } /* it8951WriteFramebuffer2Bit() */
 
 //
@@ -2287,6 +2370,8 @@ int bbepInitIT8951(FASTEPDSTATE *pState, uint8_t u8MOSI, uint8_t u8MISO, uint8_t
     gpio_set_level((gpio_num_t)u8ITE_EN, HIGH);
 #ifdef ARDUINO
     SPI.begin(u8CLK, u8MISO, u8MOSI, -1);
+#elif defined(__LINUX__)
+    linux_spi_init(u8MISO, u8MOSI, u8CLK);
 #endif // ARDUINO
     pState->spi_frequency = IT8951_SPI_PROBE_FREQUENCY;
 
@@ -2355,7 +2440,7 @@ int bbepInitIT8951(FASTEPDSTATE *pState, uint8_t u8MOSI, uint8_t u8MISO, uint8_t
     it8951WriteCmdCode(pState, USDEF_I80_CMD_TEMP);
     it8951WriteData(pState, 0x0001);
     it8951WriteData(pState, 14);
-//    Serial.println("IT8951 initialization complete");
+    //printf("IT8951 initialization complete\n");
     pState->iPanelType = BB_PANEL_IT8951;
     pState->spi_frequency = IT8951_SPI_RUN_FREQUENCY; // switch to data frequency
     return BBEP_SUCCESS;
@@ -2509,8 +2594,10 @@ int bbepFixRect(FASTEPDSTATE *pState, BB_RECT *pRect, int *iStartCol, int *iEndC
 //
 void bbepClear(FASTEPDSTATE *pState, uint8_t val, uint8_t count, BB_RECT *pRect)
 {
-    //uint8_t u8;
-    int i, k, dy, iStartCol, iEndCol, iStartRow, iEndRow; // clipping area
+int i, k, dy, iStartCol, iEndCol, iStartRow, iEndRow; // clipping area
+
+    if (pState->iPanelType == BB_PANEL_VIRTUAL || pState->iPanelType == BB_PANEL_IT8951) return; // not available
+
     if (val == BB_CLEAR_LIGHTEN) val = 0xaa;
     else if (val == BB_CLEAR_DARKEN) val = 0x55;
     else if (val == BB_CLEAR_NEUTRAL) val = 0x00;
@@ -2748,8 +2835,9 @@ int bbepFullUpdate(FASTEPDSTATE *pState, int iClearMode, bool bKeepOn, BB_RECT *
         } else if (pState->mode == BB_MODE_2BPP) {
             it8951WriteFramebuffer2Bit(pState);
         } else {
-            it8951WriteFramebuffer1Bit(pState);
+            it8951WriteFramebuffer1Bit(pState, false, 0, pState->native_height-1);
         }
+        if (!bKeepOn) bbepEinkPower(pState, 0);
         return BBEP_SUCCESS;
     } 
 
@@ -3370,7 +3458,6 @@ int bbepPartialUpdate(FASTEPDSTATE *pState, bool bKeepOn, int iStartLine, int iE
     long l = millis();
 #endif
     if (pState->iPanelType == BB_PANEL_VIRTUAL) return BBEP_ERROR_BAD_PARAMETER;
-    if (pState->iPanelType == BB_PANEL_IT8951) return bbepFullUpdate(pState, 0, 0, NULL);
 
 // Only supported in 1 and 2-bit mode (for now)
     if (pState->mode != BB_MODE_1BPP && pState->mode != BB_MODE_2BPP) return BBEP_ERROR_BAD_PARAMETER;
@@ -3381,10 +3468,21 @@ int bbepPartialUpdate(FASTEPDSTATE *pState, bool bKeepOn, int iStartLine, int iE
     }           
     if (bbepEinkPower(pState, 1) != BBEP_SUCCESS) return BBEP_IO_ERROR;
 
-    if (pState->mode == BB_MODE_2BPP) return bbep2BppPartial(pState, bKeepOn, iStartLine, iEndLine);
     if (iStartLine < 0) iStartLine = 0;
     if (iEndLine >= pState->native_height) iEndLine = pState->native_height-1;
     if (iEndLine < iStartLine) return BBEP_ERROR_BAD_PARAMETER;
+
+    if (pState->iPanelType == BB_PANEL_IT8951) {
+        if (pState->mode == BB_MODE_1BPP) { // it can do non-flickering updates
+            it8951WriteFramebuffer1Bit(pState, true, iStartLine, iEndLine);
+            if (!bKeepOn) bbepEinkPower(pState, 0);
+            return BBEP_SUCCESS;
+        } else { // just do a full update
+            return bbepFullUpdate(pState, 0, 0, NULL);
+        }
+    }
+
+    if (pState->mode == BB_MODE_2BPP) return bbep2BppPartial(pState, bKeepOn, iStartLine, iEndLine);
 
     uint8_t *pCur, *pPrev, *d;
     uint8_t diffw, diffb, cur, prev;
@@ -3493,5 +3591,6 @@ void bbepBackupPlane(FASTEPDSTATE *pState)
     int iSize = (pState->native_width/2) * pState->native_height;
     if (!pState->pPrevious || !pState->pCurrent) return;
     memcpy(pState->pPrevious, pState->pCurrent, iSize);
+    pState->prev_mode = pState->mode; // indicate both buffers are the same bpp mode
 }
 #endif // __BB_EP__
