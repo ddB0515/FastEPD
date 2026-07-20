@@ -995,14 +995,15 @@ int vcom;
         gpio_set_level((gpio_num_t)37, 1); // WAKEUP on
         gpio_set_level((gpio_num_t)26, 1); // PWRUP on
         gpio_set_level((gpio_num_t)49, 1); // VCOM CTRL on
-        vTaskDelay(3); // allow time to power up
-//        ucTemp[0] = TPS_REG_UPSEQ0;
-//        ucTemp[1] = 0xe1;
-//        bbepI2CWrite(0x68, ucTemp, 2);
-
-//        ucTemp[0] = TPS_REG_UPSEQ1;
-//        ucTemp[1] = 0xaa;
-//        bbepI2CWrite(0x68, ucTemp, 2);
+        vTaskDelay(4); // allow time to power up
+        // Allow time to fully wake-up
+        vTaskDelay(4);
+        ucTemp[0] = 0x09; // UPSEQ0
+        ucTemp[1] = 0xE1;
+        bbepI2CWrite(0x68, ucTemp, 2);
+        ucTemp[0] = 0x0A; // UPSEQ1
+        ucTemp[1] = 0xAA;
+        bbepI2CWrite(0x68, ucTemp, 2);
 
         ucTemp[0] = TPS_REG_ENABLE;
         ucTemp[1] = 0x3f; // enable output
