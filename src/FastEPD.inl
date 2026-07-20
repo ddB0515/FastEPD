@@ -361,6 +361,7 @@ static esp_lcd_i80_bus_config_t s3_bus_config = {
 #else
     .dma_burst_size = 32,
 #endif
+    .flags = { 0 },
 };
 static esp_lcd_panel_io_i80_config_t s3_io_config = {
         .cs_gpio_num = (gpio_num_t)0,
